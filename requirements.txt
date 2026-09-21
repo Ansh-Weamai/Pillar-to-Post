@@ -1,0 +1,140 @@
+================================================================
+PTP360 SECOND-PASS QA — PROTOTYPE REQUIREMENTS
+Stack: Next.js (React) + Node.js, hosted on Vercel
+Covers all 3 features. Build order at the bottom is feature-1-first.
+================================================================
+
+ARCHITECTURE OVERVIEW
+----------------------------------------------------------------
+- ONE Next.js app = frontend (React) + backend (API routes, Node.js runtime)
+- Next.js API routes ARE your Node.js backend — no separate Express server
+- Deploy to Vercel -> you get a real https:// link. No screen-sharing, no localhost.
+- All 3 features share ONE call pattern: image(s) [+ optional text] in,
+  structured JSON out. Different prompts, same underlying vision model,
+  same client library.
+
+WHY NOT A SEPARATE NODE/EXPRESS BACKEND
+----------------------------------------------------------------
+- Next.js API routes already run on Node.js. A second Express server means
+  a second deploy target, a second URL, and CORS config, for zero benefit
+  right now.
+- Only reason to split later: if this becomes an always-on background worker
+  (e.g. processing thousands of inspections overnight) instead of an
+  on-demand tool/demo. Not the case for the prototype.
+
+DO WE NEED A DATABASE? -- NO, not for the prototype
+----------------------------------------------------------------
+Reasoning, feature by feature:
+- Feature 1 checklist = static config (a JSON file in the repo), not
+  per-inspection user input -> nothing to store per request
+- Feature 1 sample tour data (location -> photo mapping) = a static demo
+  dataset, bundled in the repo
+- Features 2 and 3 are fully stateless: image (+ optional finding text) in,
+  structured JSON verdict out, nothing to persist afterward
+- Images never need to touch disk or a bucket: they go to the vision model
+  as inline base64, straight from a browser upload or a bundled static
+  file -> no Vercel Blob, no S3, no Supabase Storage needed either
+- Every "check" is compute-on-demand. There is nothing to look up later.
+
+When you WOULD need a database (not now -- flag for later, not tomorrow):
+- A history/audit log of every check ever run, per inspection, per franchisee
+- Multiple people needing to see the same past results (shared state)
+- Checklist configs becoming editable per franchise / per package tier,
+  instead of one static file you control
+-> At that point: Postgres via Vercel Postgres or Supabase is the natural
+   fit. Skip it for the prototype and for "just feature 1" right now.
+
+FRONTEND
+----------------------------------------------------------------
+next@14.x
+react@18.x
+react-dom@18.x
+tailwindcss@3.x            -- fast styling, PTP-style dark sidebar look
+lucide-react                -- icons for pass / fail / flagged states
+
+BACKEND (Node.js -- lives inside Next.js API routes, app/api/*)
+----------------------------------------------------------------
+@google/genai                -- Google's CURRENT Gemini SDK (multimodal, free tier
+                                 via AI Studio) -- the ONLY vision-model dependency,
+                                 covers all 3 features
+                                 DO NOT install @google/generative-ai -- that package
+                                 is deprecated (EOL 30 Nov 2025). Use @google/genai.
+zod                          -- validates/parses the structured JSON the model returns
+
+WHY GEMINI INSTEAD OF CLAUDE FOR THIS PROTOTYPE
+----------------------------------------------------------------
+- Claude's API is not free -- fine for the eventual real product (and the "private,
+  dedicated deployment" pitch to Furlough/Dewar still holds either way), but not
+  needed to prove the concept tomorrow
+- Gemini is genuinely free-tier, natively multimodal, and supports structured/JSON
+  output the same way our contract needs (location, coverage_confirmed, etc.)
+- Avoid the gemini-2.5-* family entirely -- scheduled for full shutdown 16 Oct 2026
+- Use the current Gemini 3 line instead:
+    gemini-3-flash-preview   -- stronger reasoning, best for Features 2 & 3
+                                 (defect matching, contradiction-checking nuance)
+    gemini-3.1-flash-lite    -- stable (not preview), cheaper/faster, fine for
+                                 Feature 1's more mechanical checklist-diff logic
+- Swapping back to Claude later is a small change, not a rebuild: the whole point
+  of "one client, one call pattern" in this architecture is that the prompts and
+  the JSON contract don't change, only the client + model string do
+
+DEV DEPENDENCIES
+----------------------------------------------------------------
+typescript
+@types/node
+@types/react
+eslint
+eslint-config-next
+
+HOSTING
+----------------------------------------------------------------
+Vercel (recommended)
+  - connect the GitHub repo, auto-deploys on every push
+  - free tier is enough for a demo
+  - gives you a real https://<project>.vercel.app link immediately, shareable
+    on the call without screen-sharing
+Alternative: Render / Railway, only if you later split out a standalone
+  Node backend (see "why not a separate backend" above)
+
+ENVIRONMENT VARIABLES REQUIRED
+----------------------------------------------------------------
+See .env.example alongside this file.
+Short answer: ONE secret covers all 3 features -- GEMINI_API_KEY.
+Coverage check, evidence-consistency check, and the contradiction flag
+are three different PROMPTS against the same vision-capable model. You
+are not integrating 3 different APIs.
+Get the key from aistudio.google.com/app/apikey -- sign in with any
+Google account, create a key, restrict it to "Gemini API" only.
+
+PER-FEATURE DATA NEEDS (no DB or storage needed for any of these)
+----------------------------------------------------------------
+Feature 1 -- Coverage check
+  Reads:  /data/checklist.json          (static, checked into the repo)
+          /data/sample-tour.json        (location -> photo path, static demo data)
+  Writes: nothing persisted -- returns the 3-state table to the browser
+          per request (not tagged / tagged but item not visible /
+          tagged and confirmed visible)
+
+Feature 2 -- Evidence-consistency check
+  Reads:  one uploaded or bundled photo (base64, in-memory only)
+  Writes: nothing persisted -- returns the JSON verdict per request
+
+Feature 3 -- Consistency / contradiction flag
+  Reads:  one photo + its paired finding text, sent together (base64 + string)
+  Writes: nothing persisted -- returns match/mismatch per request
+  Note: this one is always 1 image + 1 text, 1 pair per call. Never batched,
+  even at production scale -- see the reasoning in the feature-by-feature
+  brief already shared.
+
+BUILD ORDER (matches "starting slow, feature 1 first")
+----------------------------------------------------------------
+1. Scaffold the Next.js app, Tailwind, folder structure, Vercel project
+2. Feature 1 ONLY: checklist.json + sample-tour.json + one API route
+   (/api/coverage-check) + a table UI showing the 3-state result
+3. Deploy to Vercel now -- you want a live link after feature 1, not just
+   at the very end
+4. Feature 2: reuse the same Gemini client, new route
+   (/api/evidence-check), a simple single-photo upload UI
+5. Feature 3: reuse the client again, new route (/api/contradiction-check),
+   a paired photo+text input UI
+6. Redeploy after each feature -- always have a working hosted link to show

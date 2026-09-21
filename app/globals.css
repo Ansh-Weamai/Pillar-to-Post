@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand green — sampled ~#5A942A off PTP's own graphic, deepened for contrast */
+  --ptp-green: #3e7a1c;
+  --ptp-green-strong: #2e5e12;
+  --ptp-green-tint: #e7f1dc;
+
+  /* Ink */
+  --ink: #0a0a0a;
+  --ink-soft: #4b4b4b;
+
+  /* Canvas */
+  --paper: #ffffff;
+  --paper-warm: #fafaf7;
+  --line: #e4e4e1;
+
+  /* Status colors */
+  --status-missing: #c6221b;
+  --status-missing-tint: #fbe6e4;
+  --status-partial: #c97a0a;
+  --status-partial-tint: #fbedda;
+  --status-confirmed: var(--ptp-green);
+  --status-confirmed-tint: var(--ptp-green-tint);
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, "Inter", "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ptp-green);
+  outline-offset: 2px;
+}

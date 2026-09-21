@@ -1,0 +1,23 @@
+[
+  { "location": "Roof", "required_items": ["shingles / roof covering", "flashing", "gutters & downspouts", "chimney", "roof penetrations & vents"] },
+  { "location": "Attic", "required_items": ["insulation", "ventilation", "visible framing / rafters", "moisture or leak signs"] },
+  { "location": "Exterior / Siding", "required_items": ["siding material & condition", "trim & caulking", "exterior paint / finish", "grading & drainage away from house"] },
+  { "location": "Foundation", "required_items": ["visible foundation walls", "cracks or settlement signs", "foundation vents"] },
+  { "location": "Crawlspace", "required_items": ["foundation", "moisture signs", "insulation", "pest / wood-destroying-organism signs"] },
+  { "location": "Basement", "required_items": ["walls & floor condition", "moisture / seepage signs", "sump pump (if present)", "support posts & beams"] },
+  { "location": "Garage", "required_items": ["water heater", "electrical panel", "garage door & opener", "fire separation wall"] },
+  { "location": "Electrical System", "required_items": ["main panel & breakers", "panel labeling", "GFCI outlets", "smoke & CO detectors"] },
+  { "location": "Plumbing System", "required_items": ["main water shutoff", "supply line material", "drain lines", "water pressure"] },
+  { "location": "HVAC System", "required_items": ["furnace / heating unit", "air conditioning unit", "ductwork", "thermostat"] },
+  { "location": "Kitchen", "required_items": ["range / oven & hood vent", "dishwasher", "sink & plumbing", "GFCI outlets near sink"] },
+  { "location": "Living Room", "required_items": ["walls & ceiling condition", "flooring condition", "windows", "outlets & switches", "fireplace (if present)"] },
+  { "location": "Dining Room", "required_items": ["walls & ceiling condition", "flooring condition", "windows", "outlets & switches"] },
+  { "location": "Primary Bedroom", "required_items": ["walls & ceiling condition", "windows & egress", "closet", "smoke detector"] },
+  { "location": "Primary Bathroom", "required_items": ["toilet", "tub / shower & caulking", "sink & vanity", "ventilation fan"] },
+  { "location": "Hallway Bathroom", "required_items": ["toilet", "tub / shower & caulking", "sink & vanity", "ventilation fan"] },
+  { "location": "Interior Stairs", "required_items": ["handrail", "stair tread condition"] },
+  { "location": "Laundry Room", "required_items": ["washer / dryer connections", "dryer vent", "plumbing supply & drain"] },
+  { "location": "Front Porch", "required_items": ["entry door", "railing", "steps / stairs condition"] },
+  { "location": "Deck", "required_items": ["railing", "decking boards", "structural support posts"] },
+  { "location": "Driveway & Walkways", "required_items": ["surface condition", "drainage / slope"] }
+]

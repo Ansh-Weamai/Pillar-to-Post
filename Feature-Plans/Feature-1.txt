@@ -1,0 +1,25 @@
+Feature 1 — Coverage check
+
+Your question: is the checklist stored in the system, not user-input? Yes, exactly.
+
+The checklist is configuration data we own and store, not something anyone types in per-inspection
+For the prototype, we hand-build a representative checklist from two sources: (a) standard home-inspection categories (crawlspace, attic, electrical panel, water heater, roof, GFCI outlets, etc.) and (b) the actual location vocabulary we already see in their PTP360 data (front porch, kitchen, garage, deck, master bathroom...)
+In a real deployment, this checklist would ideally sync from whatever checklist PTP360/OnePoint uses internally per package tier — that's a Dewar-side integration question to raise on the call, not something we guess at for the prototype
+
+Your question: do we check inspector's tagged coverage against the stored checklist? Yes. But there are two distinct checks here, and it's worth keeping them separate:
+
+Pass A — metadata check (no vision model needed): pull the list of locations the inspector actually tagged in the tour (e.g., "garage", "deck", "left stairway") → diff against the expected checklist list → anything expected-but-missing = red. This is just set comparison over existing text data. Cheap, instant, zero AI cost — this is the core deliverable.
+Pass B — vision check (the stretch goal): you had it right. For each location that is tagged, pull the photo(s) attached to it, run it through a vision model, and ask "is [required item for this location] actually visible in this photo?" This catches a different failure mode than Pass A: the inspector did go to the garage and tag it, but the photo they took doesn't actually show the electrical panel — so the location is "covered" on paper but the required evidence isn't really there.
+
+Execution plan, step by step:
+
+Store the expected checklist as a config file: {location: "garage", required_items: ["electrical panel", "water heater"]} etc.
+Pull the tour's actual tagged locations + their attached photos (for the demo: our 7 sample images, labeled by location)
+Run Pass A: diff tagged locations vs. expected → red/green table, one row per checklist item
+Run Pass B on green rows only (no point checking a photo that doesn't exist): one vision-model call per image, asking about the specific required item(s) for that location → visible / not visible / confidence
+Merge both passes into one table: not tagged / tagged but item not visible / tagged and confirmed visible — three states, not two, which is a stronger demo than a flat red/green
+
+Your question: one image at a time, or multiple?
+
+One image per call. Each location's photo gets its own vision-model call, and the checklist item(s) for that specific location go in the prompt. Reason: the model's answer has to be traceable to exactly one location — batching several images into one call makes it easy for the model to blur which finding belongs to which photo, and our whole "second pass, not diagnosis" positioning depends on every output being cleanly attributable to one piece of evidence.
+At real scale (hundreds of photos per inspection), you'd batch for cost — e.g., 5–10 images per call with each one explicitly indexed ("image 1 = garage, image 2 = crawlspace...") so the model returns one JSON object per index. Not needed for tomorrow's demo size (7 images), but worth mentioning to your tech lead as the scaling path.

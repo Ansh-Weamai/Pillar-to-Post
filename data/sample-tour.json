@@ -1,0 +1,5 @@
+[
+  { "location": "Garage", "photos": ["/sample-images/garage-water-heater.png"] },
+  { "location": "Front Porch", "photos": ["/sample-images/front-porch.png"] },
+  { "location": "Deck", "photos": ["/sample-images/deck.png"] }
+]

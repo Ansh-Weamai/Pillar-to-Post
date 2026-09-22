@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { UploadCloud, X, Loader2, ImagePlus } from "lucide-react";
-import { fileToDataUrl } from "@/app/lib/roomState";
+import { compressImageFile } from "@/app/lib/imageCompression";
+import { MAX_REQUEST_DATA_URL_CHARS, totalDataUrlChars } from "@/app/lib/uploadLimits";
 
 const MAX_IMAGES = 10;
 
@@ -35,7 +36,13 @@ export default function EvidenceUpload({
     const accepted = files.slice(0, room);
     if (accepted.length === 0) return;
 
-    const dataUrls = await Promise.all(accepted.map(fileToDataUrl));
+    const dataUrls = await Promise.all(accepted.map(compressImageFile));
+    const existingChars = totalDataUrlChars(staged.map((s) => s.dataUrl));
+    if (existingChars + totalDataUrlChars(dataUrls) > MAX_REQUEST_DATA_URL_CHARS) {
+      setError("These photos are too large to upload together. Try fewer at a time.");
+      return;
+    }
+
     setStaged((prev) => [
       ...prev,
       ...accepted.map((file, i) => ({ id: `${Date.now()}-${i}-${file.name}`, name: file.name, dataUrl: dataUrls[i] })),

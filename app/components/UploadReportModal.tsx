@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { X, UploadCloud, Loader2 } from "lucide-react";
 import { fileToDataUrl } from "@/app/lib/roomState";
+import { compressImageFile } from "@/app/lib/imageCompression";
+import { MAX_PDF_BYTES, MAX_REQUEST_DATA_URL_CHARS, formatMB } from "@/app/lib/uploadLimits";
 
 export default function UploadReportModal({
   onClose,
@@ -19,9 +21,20 @@ export default function UploadReportModal({
   async function handleFile(file: File | undefined) {
     if (!file) return;
     setError(null);
+
+    const isImage = file.type.startsWith("image/");
+    if (!isImage && file.size > MAX_PDF_BYTES) {
+      setError(`This PDF is ${formatMB(file.size)} — please use one under ${formatMB(MAX_PDF_BYTES)}.`);
+      return;
+    }
+
     setAnalyzing(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = isImage ? await compressImageFile(file) : await fileToDataUrl(file);
+      if (dataUrl.length > MAX_REQUEST_DATA_URL_CHARS) {
+        setError("That file is still too large to upload. Try a smaller file.");
+        return;
+      }
       await onAnalyze(dataUrl);
       onClose();
     } catch {

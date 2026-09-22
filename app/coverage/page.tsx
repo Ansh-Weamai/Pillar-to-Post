@@ -12,11 +12,11 @@ import {
   applyUpdates,
   setRoomChecking,
   addRoomPhotos,
-  fileToDataUrl,
   roomId,
   hasAnyResults,
   describeSources,
 } from "@/app/lib/roomState";
+import { compressImageFile } from "@/app/lib/imageCompression";
 import type { CheckRoomResponse, CoverageCheckResponse, UploadReportResponse } from "@/app/lib/types";
 
 export default function CoveragePage() {
@@ -54,7 +54,7 @@ export default function CoveragePage() {
 
   async function handleAddPhotos(location: string, fileList: FileList) {
     const files = Array.from(fileList);
-    const dataUrls = await Promise.all(files.map(fileToDataUrl));
+    const dataUrls = await Promise.all(files.map(compressImageFile));
 
     setRooms((prev) => addRoomPhotos(prev, location, dataUrls));
     setRooms((prev) => setRoomChecking(prev, location, true));

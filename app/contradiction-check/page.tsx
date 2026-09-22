@@ -4,7 +4,8 @@ import { useState } from "react";
 import ContradictionInputs from "@/app/components/ContradictionInputs";
 import ContradictionVerdict from "@/app/components/ContradictionVerdict";
 import ContradictionHistory, { type HistoryEntry } from "@/app/components/ContradictionHistory";
-import { fileToDataUrl, urlToDataUrl } from "@/app/lib/roomState";
+import { urlToDataUrl } from "@/app/lib/roomState";
+import { compressImageFile } from "@/app/lib/imageCompression";
 import type { ContradictionCheckResponse, ContradictionPair, ContradictionResult } from "@/app/lib/types";
 
 export default function ContradictionCheckPage() {
@@ -21,7 +22,7 @@ export default function ContradictionCheckPage() {
   }
 
   async function uploadPhoto(file: File) {
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await compressImageFile(file);
     setPhotoDataUrl(dataUrl);
   }
 

@@ -3,6 +3,11 @@ export type ChecklistEntry = { location: string; required_items: string[] };
 export type ItemSource = "demo" | "upload" | "report";
 export type ItemStatus = "unchecked" | "missing" | "partial" | "confirmed";
 
+// Set only by the report-upload pipeline (a documented item's stated
+// condition) — null when there's nothing to rate (not documented, or the
+// item came from demo/live-photo sources that don't carry a condition read).
+export type ItemCondition = "Satisfactory" | "Needs Repair" | "Limitation" | null;
+
 export type ItemUpdate = {
   location: string;
   required_item: string;
@@ -10,6 +15,7 @@ export type ItemUpdate = {
   confidence?: number;
   thumbnail?: string;
   source: ItemSource;
+  condition?: ItemCondition;
 };
 
 export type CoverageCheckResponse = {
@@ -62,6 +68,41 @@ export type EvidenceCheckItem =
 export type EvidenceCheckResponse = {
   results: EvidenceCheckItem[];
 };
+
+// Feature 2 — Room Walkthrough mode: several photos of the SAME room, no
+// fixed checklist. The model decides what's checkable, citing which image(s)
+// support each thing it reports.
+export type RoomWalkthroughImageQuality = {
+  image_index: number;
+  usable: boolean;
+  issue: ImageQualityIssue;
+};
+
+export type RoomWalkthroughDefectSignature = {
+  signature: string;
+  severity: DefectSeverity;
+  confidence: number;
+};
+
+export type RoomWalkthroughElement = {
+  element: string;
+  category: string;
+  seen_in_images: number[];
+  condition_observed: string;
+  defect_signatures: RoomWalkthroughDefectSignature[];
+  recommended_check: string | null;
+  confidence: number;
+};
+
+export type RoomWalkthroughResult = {
+  room: string;
+  images_analyzed: number;
+  image_quality: RoomWalkthroughImageQuality[];
+  detected_elements: RoomWalkthroughElement[];
+  overall_summary: string;
+};
+
+export type RoomWalkthroughCheckResponse = { result: RoomWalkthroughResult; error?: false } | { error: true; message?: string };
 
 // Feature 3 — Contradiction Flag: one photo + one finding text, checked together.
 export type Omission = {

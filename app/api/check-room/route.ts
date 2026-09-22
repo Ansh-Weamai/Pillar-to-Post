@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `unknown location "${location}"` }, { status: 400 });
   }
 
-  const ai = getClient();
+  const ai = getClient(1);
   if (!ai) {
     const updates: ItemUpdate[] = entry.required_items.map((item) => ({
       location,

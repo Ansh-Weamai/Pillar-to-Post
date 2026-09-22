@@ -81,7 +81,7 @@ export default function RoomCard({
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     {!checking && state.confidence !== undefined && (state.status === "confirmed" || state.status === "partial") ? (
                       <span className="text-[12px] text-ink-soft">{Math.round(state.confidence * 100)}%</span>
                     ) : null}
@@ -90,7 +90,20 @@ export default function RoomCard({
                         <Loader2 size={16} className="animate-spin" /> Checking…
                       </span>
                     ) : (
-                      <StatusIcon status={state.status} />
+                      <>
+                        <StatusIcon status={state.status} />
+                        {state.condition === "Needs Repair" || state.condition === "Limitation" ? (
+                          <span
+                            className={`rounded-[4px] px-1.5 py-0.5 text-[12px] font-bold ${
+                              state.condition === "Needs Repair"
+                                ? "bg-status-missing-tint text-status-missing"
+                                : "bg-status-partial-tint text-status-partial"
+                            }`}
+                          >
+                            {state.condition}
+                          </span>
+                        ) : null}
+                      </>
                     )}
                   </div>
                 </div>

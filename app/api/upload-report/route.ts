@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     entry.required_items.map((item) => ({ location: entry.location, required_item: item }))
   );
 
-  const ai = getClient();
+  const ai = getClient(1);
   if (!ai) {
     const updates: ItemUpdate[] = allItems.map((i) => ({ ...i, status: "missing", source: "report" }));
     return NextResponse.json({ updates });
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     const updates: ItemUpdate[] = allItems.map(({ location, required_item }) => {
       const result = resultByKey.get(`${location}::${required_item}`);
       if (!result || !result.documented) {
-        return { location, required_item, status: "missing", source: "report" };
+        return { location, required_item, status: "missing", source: "report", condition: null };
       }
       return {
         location,
@@ -55,6 +55,7 @@ export async function POST(req: Request) {
         status: "confirmed",
         confidence: result.confidence,
         source: "report",
+        condition: result.condition,
       };
     });
 

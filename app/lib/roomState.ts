@@ -1,9 +1,10 @@
-import type { ChecklistEntry, ItemSource, ItemStatus, ItemUpdate } from "@/app/lib/types";
+import type { ChecklistEntry, ItemCondition, ItemSource, ItemStatus, ItemUpdate } from "@/app/lib/types";
 
 export type ItemState = {
   status: ItemStatus;
   confidence?: number;
   source?: ItemSource;
+  condition?: ItemCondition;
 };
 
 export type RoomPhoto = {
@@ -48,6 +49,7 @@ export function applyUpdates(rooms: RoomState[], updates: ItemUpdate[]): RoomSta
         status: update.status,
         confidence: update.confidence,
         source: update.source,
+        condition: update.condition,
       };
       if (update.thumbnail && !photos.some((p) => p.url === update.thumbnail)) {
         photos.push({ url: update.thumbnail, source: "demo" });
@@ -77,6 +79,30 @@ export function worstStatus(requiredItems: string[], items: Record<string, ItemS
   if (counts.partial > 0) return "partial";
   if (counts.unchecked > 0) return "unchecked";
   return "confirmed";
+}
+
+export function hasAnyResults(rooms: RoomState[]): boolean {
+  return rooms.some((room) => room.requiredItems.some((name) => room.items[name]?.source !== undefined));
+}
+
+const SOURCE_LABELS: Record<ItemSource, string> = {
+  demo: "Load demo data",
+  upload: "Manual photo uploads",
+  report: "Uploaded report",
+};
+
+export function describeSources(rooms: RoomState[]): string {
+  const present = new Set<ItemSource>();
+  for (const room of rooms) {
+    for (const name of room.requiredItems) {
+      const source = room.items[name]?.source;
+      if (source) present.add(source);
+    }
+  }
+  if (present.size === 0) return "No checks run yet";
+  return Array.from(present)
+    .map((source) => SOURCE_LABELS[source])
+    .join(" + ");
 }
 
 export function roomId(location: string): string {

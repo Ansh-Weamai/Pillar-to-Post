@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
 import { parseDataUrl } from "@/app/lib/gemini";
-import type { EvidenceCheckItem } from "@/app/lib/types";
+import type { EvidenceCheckItem, RoomWalkthroughResult } from "@/app/lib/types";
 
 const STATUS_LABEL: Record<string, string> = {
   clean: "Clean",
@@ -8,6 +8,8 @@ const STATUS_LABEL: Record<string, string> = {
   needs_review: "Needs review",
   unusable: "Unusable",
 };
+
+const SEVERITY_LABEL: Record<string, string> = { low: "LOW", medium: "MEDIUM", high: "HIGH" };
 
 const INK = "#0a0a0a";
 const INK_SOFT = "#4b4b4b";
@@ -91,6 +93,84 @@ export function renderEvidenceReportPdf(images: { base64: string; analysis: Evid
     doc.moveDown(0.4);
     doc.fontSize(10).fillColor(INK).text(analysis.overall.summary, { continued: true });
     doc.fillColor(INK_SOFT).text(`   Risk ${analysis.overall.risk_score}/100`);
+  });
+
+  doc.end();
+  return done;
+}
+
+// Room Walkthrough mode — same toolchain/route as Single Photo mode above,
+// just a different payload shape: the room's photos up top, then each
+// detected element written out below (no per-image pairing, since one
+// element can cite several images at once).
+export function renderRoomWalkthroughReportPdf(images: string[], result: RoomWalkthroughResult): Promise<Buffer> {
+  const doc = new PDFDocument({ size: "A4", margin: 40 });
+  const chunks: Buffer[] = [];
+  doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+  const done = new Promise<Buffer>((resolve, reject) => {
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+  });
+
+  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+  doc.fontSize(18).fillColor(INK).text(`Room Walkthrough — ${result.room}`);
+  doc.fontSize(10).fillColor(INK_SOFT).text(result.overall_summary);
+  doc.moveDown(1);
+
+  const thumbWidth = Math.min(110, (pageWidth - 8 * (images.length - 1)) / Math.max(images.length, 1));
+  const thumbTop = doc.y;
+  images.forEach((base64, i) => {
+    try {
+      const { data } = parseDataUrl(base64);
+      doc.image(Buffer.from(data, "base64"), doc.page.margins.left + i * (thumbWidth + 8), thumbTop, {
+        width: thumbWidth,
+        height: thumbWidth,
+      });
+    } catch {
+      // skip an image that couldn't be embedded rather than failing the whole PDF
+    }
+  });
+  doc.y = thumbTop + thumbWidth + 16;
+
+  result.detected_elements.forEach((element, i) => {
+    if (i > 0) doc.moveDown(0.6);
+
+    doc.fontSize(13).fillColor(INK).text(element.element);
+    doc.moveDown(0.15);
+    doc
+      .fillColor(INK_SOFT)
+      .fontSize(9)
+      .text(
+        `${element.category.toUpperCase()}  ·  Seen in photo${element.seen_in_images.length > 1 ? "s" : ""} ${element.seen_in_images.join(", ")}`
+      );
+    doc.moveDown(0.3);
+    doc.fillColor(INK).fontSize(10.5).text(element.condition_observed);
+
+    if (element.defect_signatures.length === 0) {
+      doc.fontSize(10).fillColor(INK_SOFT).text("No concerns visible.");
+    } else {
+      for (const d of element.defect_signatures) {
+        doc
+          .fillColor(INK)
+          .fontSize(10)
+          .text(`${d.signature}`, { continued: true })
+          .fillColor(INK_SOFT)
+          .text(`   ${SEVERITY_LABEL[d.severity]} · ${Math.round(d.confidence * 100)}%`);
+      }
+    }
+
+    if (element.recommended_check) {
+      doc.fontSize(9.5).fillColor(INK_SOFT).text(`Recommend: ${element.recommended_check}`);
+    }
+
+    doc.moveDown(0.4);
+    doc
+      .strokeColor(LINE)
+      .moveTo(doc.x, doc.y)
+      .lineTo(doc.x + pageWidth, doc.y)
+      .stroke();
   });
 
   doc.end();

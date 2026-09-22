@@ -37,9 +37,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "image and findingText are required" }, { status: 400 });
   }
 
-  const ai = getClient();
+  const ai = getClient(3);
   if (!ai) {
-    const response: ContradictionCheckResponse = { error: true, message: "GEMINI_API_KEY not configured." };
+    const response: ContradictionCheckResponse = { error: true, message: "GEMINI_API_KEY_3 not configured." };
     return NextResponse.json(response);
   }
 

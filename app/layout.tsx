@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import TabBar from "./components/TabBar";
+import Header from "./components/Header";
 
 export const metadata: Metadata = {
   title: "PTP360 · Second-Pass QA",
@@ -15,10 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="mx-auto max-w-[960px] px-4 pt-6">
-          <span className="text-[14px] text-ink-soft">PTP360 · Second-Pass QA</span>
-        </div>
-        <TabBar />
+        <Header />
         <main className="mx-auto max-w-[960px] px-4 py-8">{children}</main>
       </body>
     </html>

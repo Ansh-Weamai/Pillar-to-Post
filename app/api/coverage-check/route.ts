@@ -74,7 +74,7 @@ export async function POST() {
   const tour: TourEntry[] = JSON.parse(tourRaw);
   const tourByLocation = new Map(tour.map((t) => [t.location, t]));
 
-  const ai = getClient();
+  const ai = getClient(1);
 
   // Pass A: only locations present in the tour proceed to Pass B (one Gemini call per photo, run in parallel).
   const taggedEntries = checklist.filter((entry) => tourByLocation.has(entry.location));
@@ -87,7 +87,7 @@ export async function POST() {
       const itemResults = new Map<string, ItemVerdict>();
       if (!ai) {
         for (const item of entry.required_items) {
-          itemResults.set(item, { visible: false, confidence: 0, reasoning: "GEMINI_API_KEY not configured" });
+          itemResults.set(item, { visible: false, confidence: 0, reasoning: "GEMINI_API_KEY_1 not configured" });
         }
       } else {
         const perPhotoMaps = await Promise.all(

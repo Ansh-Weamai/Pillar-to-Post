@@ -4,8 +4,11 @@ import type { ChecklistEntry } from "@/app/lib/types";
 
 export const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
-export function getClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
+// Each feature calls out with its own key (GEMINI_API_KEY_1/2/3) so usage/
+// quota/billing can be tracked and capped per feature independently, even
+// though all three hit the same model.
+export function getClient(feature: 1 | 2 | 3): GoogleGenAI | null {
+  const apiKey = process.env[`GEMINI_API_KEY_${feature}`];
   return apiKey ? new GoogleGenAI({ apiKey }) : null;
 }
 
@@ -25,6 +28,7 @@ export const ReportItemResultSchema = z.object({
   required_item: z.string(),
   documented: z.boolean(),
   confidence: z.number().min(0).max(1),
+  condition: z.enum(["Satisfactory", "Needs Repair", "Limitation"]).nullable(),
 });
 
 export const ReportResponseSchema = z.object({
@@ -71,16 +75,28 @@ ${checklistText}
 Go through the document and determine, for EACH location above:
 1. Is this location discussed or photographed anywhere in the document?
 2. For each required item under that location, is it visibly documented?
+3. If documented, what condition does the report state or imply for it —
+   "Satisfactory" (no issue reported), "Needs Repair" (a defect, damage, or
+   repair recommendation is stated), or "Limitation" (the report explicitly
+   says the item couldn't be fully evaluated)? If not documented at all,
+   condition is null — there is nothing to rate.
 
 Respond ONLY with JSON:
 {
   "results": [
-    { "location": "...", "required_item": "...", "documented": true|false, "confidence": 0-1 }
+    {
+      "location": "...",
+      "required_item": "...",
+      "documented": true|false,
+      "confidence": 0-1,
+      "condition": "Satisfactory" | "Needs Repair" | "Limitation" | null
+    }
   ]
 }
 
 Cover every location and every required item from the checklist above, even
-ones the document never mentions (documented: false for those).`;
+ones the document never mentions (documented: false, condition: null for
+those).`;
 }
 
 // Feature 2 — Evidence Consistency: raw per-image model output. The model
@@ -148,6 +164,92 @@ extra commentary:
     }
   ],
   "overall": { "summary": "one plain sentence, max 20 words" }
+}`;
+}
+
+// Feature 2 — Room Walkthrough mode: several photos of the same room, no
+// fixed checklist. Raw model output only — nothing computed afterward, this
+// mode has no deterministic scoring layer (unlike Single Photo mode).
+export const RoomWalkthroughElementSchema = z.object({
+  element: z.string(),
+  category: z.string(),
+  seen_in_images: z.array(z.number()),
+  condition_observed: z.string(),
+  defect_signatures: z.array(
+    z.object({
+      signature: z.string(),
+      severity: z.enum(["low", "medium", "high"]),
+      confidence: z.number().min(0).max(1),
+    })
+  ),
+  recommended_check: z.string().nullable(),
+  confidence: z.number().min(0).max(1),
+});
+
+export const RoomWalkthroughModelResponseSchema = z.object({
+  room: z.string(),
+  images_analyzed: z.number(),
+  image_quality: z.array(
+    z.object({
+      image_index: z.number(),
+      usable: z.boolean(),
+      issue: z.enum(["blurry", "too_dark", "obstructed"]).nullable(),
+    })
+  ),
+  detected_elements: z.array(RoomWalkthroughElementSchema),
+  overall_summary: z.string(),
+});
+
+export type RoomWalkthroughModelResponse = z.infer<typeof RoomWalkthroughModelResponseSchema>;
+
+export function buildRoomWalkthroughPrompt(room: string, imageCount: number): string {
+  return `You are reviewing ${imageCount} photos of the same room (${room}), taken from different
+angles/walls. You have NOT been given a checklist — decide for yourself what
+is actually worth checking, based only on what you can see.
+
+Images are provided as image_1 through image_${imageCount}, in that order.
+
+For each image, first note if it is too blurry, dark, or obstructed to
+evaluate reliably.
+
+Then identify up to 8 distinct checkable elements visible across these
+photos — things like windows, outlets, flooring, fixtures, vents, visible
+wall or ceiling condition, doors, built-ins. Only list something you can
+actually point to in a specific image. Do not invent items to fill out the
+list, and do not repeat the same physical element twice just because it
+appears in more than one photo — merge it into one entry citing all the
+images it appears in.
+
+For each element: describe its condition in plain language, note any visible
+defect signatures with severity and confidence (empty if none), and — only
+if genuinely useful and not obvious from the photo alone — note one specific
+thing a human inspector should physically check that the photo can't confirm
+(e.g. "test this outlet with a plug-in tester", "verify this window latches
+and seals properly"). Leave this null if there's nothing non-obvious to add.
+
+Respond ONLY with JSON matching this exact shape, no markdown fences, no
+extra commentary:
+
+{
+  "room": "${room}",
+  "images_analyzed": ${imageCount},
+  "image_quality": [
+    { "image_index": 1, "usable": true, "issue": null }
+  ],
+  "detected_elements": [
+    {
+      "element": "<short label, e.g. 'window, left wall'>",
+      "category": "<general type, e.g. 'window' | 'outlet' | 'flooring' | 'wall' | 'fixture' | 'vent' | 'door'>",
+      "seen_in_images": [1, 3],
+      "condition_observed": "<one plain sentence>",
+      "defect_signatures": [
+        { "signature": "<name>", "severity": "low" | "medium" | "high", "confidence": 0.7 }
+      ],
+      "recommended_check": "<one sentence, or null>",
+      "confidence": 0.8
+    }
+  ],
+  "overall_summary": "<one sentence, max 20 words>"
 }`;
 }
 

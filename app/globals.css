@@ -8,6 +8,11 @@
   --ptp-green-strong: #2e5e12;
   --ptp-green-tint: #e7f1dc;
 
+  /* Brand marks — sampled directly from the Pillar To Post logo */
+  --brand-blue: #0000bc;
+  --brand-blue-strong: #00008a;
+  --brand-green: #73fc00;
+
   /* Ink */
   --ink: #0a0a0a;
   --ink-soft: #4b4b4b;

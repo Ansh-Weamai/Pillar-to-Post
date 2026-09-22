@@ -28,7 +28,7 @@ function unconfiguredResult(imageId: string): EvidenceCheckItem {
         risk_score: 0,
         status: "unusable",
         recommended_action: "retake_photo",
-        summary: "GEMINI_API_KEY not configured.",
+        summary: "GEMINI_API_KEY_2 not configured.",
       },
     },
   };
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
   }
 
   const imageIds = images.map((_, i) => `img_${i + 1}`);
-  const ai = getClient();
+  const ai = getClient(2);
 
   const results = ai
     ? await mapWithConcurrency(images, CONCURRENCY, (dataUrl, index) => analyzeImage(ai, imageIds[index], dataUrl))

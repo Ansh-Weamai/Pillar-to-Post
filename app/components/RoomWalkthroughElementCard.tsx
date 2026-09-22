@@ -1,11 +1,8 @@
 import { Info } from "lucide-react";
+import { categoryStyle } from "@/app/lib/categoryStyle";
+import { SEVERITY_LABEL, SEVERITY_STYLE } from "@/app/lib/severityStyle";
+import { formatText } from "@/app/lib/textFormat";
 import type { RoomWalkthroughElement } from "@/app/lib/types";
-
-const SEVERITY_STYLE: Record<string, string> = {
-  low: "bg-status-partial-tint text-status-partial",
-  medium: "bg-status-partial-tint text-status-partial",
-  high: "bg-status-missing-tint text-status-missing",
-};
 
 export default function RoomWalkthroughElementCard({
   element,
@@ -20,12 +17,12 @@ export default function RoomWalkthroughElementCard({
     <div className="rounded-[10px] border border-line bg-paper p-4 shadow-sm">
       <div className="mb-1.5 flex items-start justify-between gap-2">
         <h3 className="text-[14px] font-bold capitalize text-ink">{element.element}</h3>
-        <span className="whitespace-nowrap rounded-[4px] bg-paper-warm px-1.5 py-0.5 text-[11px] font-bold uppercase text-ink-soft">
+        <span className={`whitespace-nowrap rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold capitalize ${categoryStyle(element.category)}`}>
           {element.category}
         </span>
       </div>
 
-      <p className="text-[13px] text-ink">{element.condition_observed}</p>
+      <p className="whitespace-pre-line text-[13px] text-ink">{formatText(element.condition_observed)}</p>
 
       {element.defect_signatures.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -34,7 +31,7 @@ export default function RoomWalkthroughElementCard({
               key={i}
               className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold capitalize ${SEVERITY_STYLE[d.severity]}`}
             >
-              {d.signature} · {d.severity}
+              {d.signature} · {SEVERITY_LABEL[d.severity]}
             </span>
           ))}
         </div>
@@ -43,8 +40,8 @@ export default function RoomWalkthroughElementCard({
       )}
 
       {element.recommended_check ? (
-        <p className="mt-2 flex items-start gap-1.5 text-[12px] text-ink-soft">
-          <Info size={13} className="mt-0.5 shrink-0" /> {element.recommended_check}
+        <p className="mt-2 flex items-start gap-1.5 whitespace-pre-line text-[12px] text-ink-soft">
+          <Info size={13} className="mt-0.5 shrink-0" /> {formatText(element.recommended_check)}
         </p>
       ) : null}
 

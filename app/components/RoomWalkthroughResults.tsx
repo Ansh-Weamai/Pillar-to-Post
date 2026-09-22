@@ -1,4 +1,5 @@
 import RoomWalkthroughElementCard from "@/app/components/RoomWalkthroughElementCard";
+import { formatText } from "@/app/lib/textFormat";
 import type { RoomWalkthroughResult } from "@/app/lib/types";
 
 export default function RoomWalkthroughResults({
@@ -30,7 +31,7 @@ export default function RoomWalkthroughResults({
 
       <div className="mb-5 rounded-[10px] border border-line bg-paper-warm p-4">
         <p className="text-[13px] font-bold capitalize text-ink">{result.room}</p>
-        <p className="mt-0.5 text-[13px] text-ink-soft">{result.overall_summary}</p>
+        <p className="mt-0.5 whitespace-pre-line text-[13px] text-ink-soft">{formatText(result.overall_summary)}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

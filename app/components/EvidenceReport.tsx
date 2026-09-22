@@ -2,6 +2,8 @@
 
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import EvidenceStatusBadge from "@/app/components/EvidenceStatusBadge";
+import { SEVERITY_LABEL, SEVERITY_STYLE } from "@/app/lib/severityStyle";
+import { formatText } from "@/app/lib/textFormat";
 import type { EvidenceCheckItem } from "@/app/lib/types";
 import type { StagedImage } from "@/app/components/EvidenceUpload";
 
@@ -66,13 +68,15 @@ export default function EvidenceReport({
                       <ul className="flex flex-col gap-3">
                         {item.analysis.defect_signatures.map((d, di) => (
                           <li key={di} className="rounded-[8px] border border-line bg-paper-warm p-3">
-                            <div className="mb-1 flex items-center justify-between">
+                            <div className="mb-1 flex items-center justify-between gap-2">
                               <span className="text-[14px] font-bold capitalize text-ink">{d.signature}</span>
-                              <span className="text-[12px] font-bold uppercase text-ink-soft">{d.severity}</span>
+                              <span className={`whitespace-nowrap rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold ${SEVERITY_STYLE[d.severity]}`}>
+                                {SEVERITY_LABEL[d.severity]}
+                              </span>
                             </div>
-                            <p className="text-[13px] text-ink">{d.description}</p>
+                            <p className="whitespace-pre-line text-[13px] text-ink">{formatText(d.description)}</p>
                             <p className="mt-1 text-[12px] text-ink-soft">
-                              {d.region} · {Math.round(d.confidence * 100)}% confidence ·{" "}
+                              {formatText(d.region)} · {Math.round(d.confidence * 100)}% confidence ·{" "}
                               {d.recommended_action === "flag_for_review" ? "Flag for review" : "Pass"}
                             </p>
                           </li>
@@ -81,7 +85,7 @@ export default function EvidenceReport({
                     )}
 
                     <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-                      <p className="text-[13px] text-ink">{item.analysis.overall.summary}</p>
+                      <p className="whitespace-pre-line text-[13px] text-ink">{formatText(item.analysis.overall.summary)}</p>
                       <span className="whitespace-nowrap text-[12px] font-bold text-ink-soft">
                         Risk {item.analysis.overall.risk_score}/100
                       </span>

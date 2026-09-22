@@ -1,6 +1,7 @@
 import { ImageOff } from "lucide-react";
 import EvidenceStatusBadge from "@/app/components/EvidenceStatusBadge";
 import { topDefect } from "@/app/lib/evidenceUi";
+import { SEVERITY_LABEL, SEVERITY_STYLE } from "@/app/lib/severityStyle";
 import type { EvidenceCheckItem } from "@/app/lib/types";
 
 export default function EvidenceResultCard({
@@ -35,8 +36,13 @@ export default function EvidenceResultCard({
               {item.analysis.detected_location ?? "Location unclear"}
             </p>
             {top ? (
-              <p className="text-[13px] capitalize text-ink">
-                {top.signature} <span className="text-ink-soft">({top.severity})</span>
+              <p className="flex items-center gap-1.5 text-[13px] capitalize text-ink">
+                {top.signature}
+                <span
+                  className={`rounded-[4px] px-1.5 py-0.5 text-[11px] font-bold normal-case ${SEVERITY_STYLE[top.severity]}`}
+                >
+                  {SEVERITY_LABEL[top.severity]}
+                </span>
               </p>
             ) : (
               <p className="text-[13px] text-ink-soft">No concerns visible</p>

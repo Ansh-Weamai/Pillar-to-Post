@@ -4,13 +4,19 @@ import { useRef } from "react";
 import { Plus, Loader2, ChevronDown } from "lucide-react";
 import StatusIcon from "@/app/components/StatusIcon";
 import { worstStatus, type ItemState, type RoomPhoto } from "@/app/lib/roomState";
-import type { ItemStatus } from "@/app/lib/types";
+import type { ItemCondition, ItemStatus } from "@/app/lib/types";
 
 const SUMMARY_STYLES: Record<ItemStatus, string> = {
   missing: "bg-status-missing-tint text-status-missing",
   partial: "bg-status-partial-tint text-status-partial",
   unchecked: "bg-paper-warm text-ink-soft",
   confirmed: "bg-status-confirmed-tint text-status-confirmed",
+};
+
+const CONDITION_STYLES: Record<NonNullable<ItemCondition>, string> = {
+  Satisfactory: "bg-status-confirmed-tint text-status-confirmed",
+  "Needs Repair": "bg-status-missing-tint text-status-missing",
+  Limitation: "bg-status-partial-tint text-status-partial",
 };
 
 function summarize(requiredItems: string[], items: Record<string, ItemState>) {
@@ -92,13 +98,9 @@ export default function RoomCard({
                     ) : (
                       <>
                         <StatusIcon status={state.status} />
-                        {state.condition === "Needs Repair" || state.condition === "Limitation" ? (
+                        {state.condition ? (
                           <span
-                            className={`rounded-[4px] px-1.5 py-0.5 text-[12px] font-bold ${
-                              state.condition === "Needs Repair"
-                                ? "bg-status-missing-tint text-status-missing"
-                                : "bg-status-partial-tint text-status-partial"
-                            }`}
+                            className={`rounded-[4px] px-1.5 py-0.5 text-[12px] font-bold ${CONDITION_STYLES[state.condition]}`}
                           >
                             {state.condition}
                           </span>

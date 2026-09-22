@@ -13,32 +13,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "location and at least one image are required" }, { status: 400 });
   }
 
-  const checklistRaw = await fs.readFile(path.join(process.cwd(), "data", "checklist.json"), "utf-8");
-  const checklist: ChecklistEntry[] = JSON.parse(checklistRaw);
-  const entry = checklist.find((e) => e.location === location);
-
-  if (!entry) {
-    return NextResponse.json({ error: `unknown location "${location}"` }, { status: 400 });
-  }
-
-  const ai = getClient(1);
-  if (!ai) {
-    const updates: ItemUpdate[] = entry.required_items.map((item) => ({
-      location,
-      required_item: item,
-      status: "partial",
-      confidence: 0,
-      source: "upload",
-    }));
-    return NextResponse.json({ updates });
-  }
-
-  const parts = images.map((dataUrl) => {
-    const { mimeType, data } = parseDataUrl(dataUrl);
-    return { inlineData: { mimeType, data } };
-  });
-
   try {
+    const checklistRaw = await fs.readFile(path.join(process.cwd(), "data", "checklist.json"), "utf-8");
+    const checklist: ChecklistEntry[] = JSON.parse(checklistRaw);
+    const entry = checklist.find((e) => e.location === location);
+
+    if (!entry) {
+      return NextResponse.json({ error: `unknown location "${location}"` }, { status: 400 });
+    }
+
+    const ai = getClient(1);
+    if (!ai) {
+      const updates: ItemUpdate[] = entry.required_items.map((item) => ({
+        location,
+        required_item: item,
+        status: "partial",
+        confidence: 0,
+        source: "upload",
+      }));
+      return NextResponse.json({ updates });
+    }
+
+    const parts = images.map((dataUrl) => {
+      const { mimeType, data } = parseDataUrl(dataUrl);
+      return { inlineData: { mimeType, data } };
+    });
+
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: [
@@ -68,14 +68,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ updates });
-  } catch {
-    const updates: ItemUpdate[] = entry.required_items.map((item) => ({
-      location,
-      required_item: item,
-      status: "partial",
-      confidence: 0,
-      source: "upload",
-    }));
-    return NextResponse.json({ updates });
+  } catch (e) {
+    console.error("[check-room]:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ updates: [] }, { status: 500 });
   }
 }

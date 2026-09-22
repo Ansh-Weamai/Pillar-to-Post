@@ -12,22 +12,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "dataUrl is required" }, { status: 400 });
   }
 
-  const checklistRaw = await fs.readFile(path.join(process.cwd(), "data", "checklist.json"), "utf-8");
-  const checklist: ChecklistEntry[] = JSON.parse(checklistRaw);
-
-  const allItems = checklist.flatMap((entry) =>
-    entry.required_items.map((item) => ({ location: entry.location, required_item: item }))
-  );
-
-  const ai = getClient(1);
-  if (!ai) {
-    const updates: ItemUpdate[] = allItems.map((i) => ({ ...i, status: "missing", source: "report" }));
-    return NextResponse.json({ updates });
-  }
-
-  const { mimeType, data } = parseDataUrl(dataUrl);
-
   try {
+    const checklistRaw = await fs.readFile(path.join(process.cwd(), "data", "checklist.json"), "utf-8");
+    const checklist: ChecklistEntry[] = JSON.parse(checklistRaw);
+
+    const allItems = checklist.flatMap((entry) =>
+      entry.required_items.map((item) => ({ location: entry.location, required_item: item }))
+    );
+
+    const ai = getClient(1);
+    if (!ai) {
+      const updates: ItemUpdate[] = allItems.map((i) => ({ ...i, status: "missing", source: "report", condition: null }));
+      return NextResponse.json({ updates });
+    }
+
+    const { mimeType, data } = parseDataUrl(dataUrl);
+
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: [
@@ -60,8 +60,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ updates });
-  } catch {
-    const updates: ItemUpdate[] = allItems.map((i) => ({ ...i, status: "missing", source: "report" }));
-    return NextResponse.json({ updates });
+  } catch (e) {
+    console.error("[upload-report]:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ updates: [] }, { status: 500 });
   }
 }

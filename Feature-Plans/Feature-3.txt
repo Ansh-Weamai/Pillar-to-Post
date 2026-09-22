@@ -1,0 +1,247 @@
+# PTP360 Second-Pass QA — Feature 3: Consistency / Contradiction Flag
+
+Full plan, same format as the Feature 1 and Feature 2 docs. Read the
+`checklist_confusion_note` at the bottom of `BUILD_PROMPT_FEATURE_2.md` again
+if needed — this feature takes photo + finding text TOGETHER, in one call,
+and asks for a single agreement verdict. It does not run a separate blind
+prediction and diff it against the human's text afterward — that's Feature
+2's mechanism, not this one.
+
+---
+
+## 1. Inputs
+
+Two things, always sent together in one call:
+1. **One photo**
+2. **One finding text** (the inspector's written line for that photo)
+
+Two ways to supply them, both live in the same screen:
+- **Upload your own**: a photo file input + a plain text box for the finding.
+  This is the primary path — a real user should be able to paste any finding
+  text and drop in any photo.
+- **Load sample pair**: a dropdown that fills both fields from a pre-built
+  pool (section 6) for fast, no-typing demoing.
+
+**Critical design choice**: the photo dropdown and the finding-text dropdown
+are two INDEPENDENT selectors, not one combined "pick a pair" selector. That
+independence is what lets the pool double as both realistic pairs (for the
+"look, it correctly confirms agreement" moment) and deliberately mismatched
+pairs (for the "watch it catch a real disagreement" moment) — same 8-item
+pool, no separate mismatch data needed.
+
+---
+
+## 2. Layout
+
+```
+┌─────────────────────────────┬───────────────────────────────┐
+│  INPUTS                       │  VERDICT                       │
+│                                │                                 │
+│  Photo                         │        ⬤  MATCH                │
+│  [ Load sample ▾ ] or upload   │        confidence: 92%          │
+│  [ thumbnail preview ]         │                                 │
+│                                │  "The photo shows active water  │
+│  Finding text                  │   leakage at the base of the    │
+│  [ Load sample ▾ ] or:         │   heater consistent with a TPR  │
+│  ┌───────────────────────┐    │   valve leak as described."     │
+│  │ (plain textarea)       │    │                                 │
+│  └───────────────────────┘    │  Also spotted, not mentioned:   │
+│                                │  ⚠ Corrosion on the tank base    │
+│  [ Check agreement ]           │    (medium, 78%)                 │
+│                                │                                 │
+│                                │  Recommended action:            │
+│                                │  [ flag_for_review ]  badge     │
+└─────────────────────────────┴───────────────────────────────┘
+
+  Session history (below, optional but recommended for live demo):
+  [thumb] "Water leaking from TPR..."      MATCH     92%
+  [thumb] "Wood damage on railing..."      MISMATCH  81%   ← swapped on purpose
+  [thumb] "Caulking cracked, mold..."       MATCH     88%
+```
+
+- Left/right split, same as you described — just with correct contents:
+  left is the two inputs (photo + text), right is the single verdict, not a
+  second image/text pair to visually diff.
+- **"Also spotted, not mentioned" list** only renders when `omissions` is
+  non-empty — no empty section header sitting there with nothing under it.
+  Same icon/severity styling as Feature 1/2's status system, not a new visual
+  language.
+- **Session history strip** underneath: every check run in this session,
+  newest at top, each row = thumbnail + truncated finding text + verdict
+  badge + confidence. Purely client-side state, nothing persisted — this is
+  what makes the live demo work: run 2–3 pairings in a row (including one
+  deliberate mismatch) and the growing list itself becomes the proof, more
+  convincing than any single result shown in isolation.
+- No page navigation, no back button needed here — this is a single screen,
+  unlike Feature 2's results/report toggle.
+
+---
+
+## 3. Structured output schema
+
+```ts
+type ContradictionResult = {
+  verdict: "match" | "mismatch";
+  confidence: number;          // 0-1
+  reasoning: string;           // one sentence, plain language, why
+
+  // NEW: the reverse direction. verdict/confidence/reasoning above only
+  // check "does the finding's claim hold up against the photo." This checks
+  // the other way: "does the photo show something the finding never
+  // mentioned at all." Empty array is a valid, meaningful result — it means
+  // nothing else stood out, not that the check failed.
+  omissions: Array<{
+    description: string;       // plain language, what's visible but unmentioned
+    severity: "low" | "medium" | "high";
+    confidence: number;        // 0-1
+  }>;
+
+  recommended_action: "pass" | "flag_for_review";
+};
+```
+
+Why bother with both directions: a finding can be perfectly accurate about
+what it describes and STILL miss something else sitting in the same frame —
+that's precisely the failure mode this whole pitch is built around ("quality
+issues surface only after the report reaches the client"). Checking only
+`verdict` would miss that entirely. `omissions` is what turns this from "did
+the inspector lie" into "did the inspector miss something," which is the
+more useful and more common real case.
+
+---
+
+## 4. Prompt template
+
+```
+You are checking a home inspector's written finding against the accompanying
+photo, in two directions. You are NOT inspecting the home yourself and NOT
+judging how well-written the finding is.
+
+Inspector's finding: "{finding_text}"
+
+Direction 1 — does the finding hold up? Does this photo plausibly show what
+the finding describes? Consider it a match if the photo is consistent with
+it, even if not every detail is captured. Consider it a mismatch if the
+photo shows something clearly different from, or contradicted by, the
+finding (wrong location, wrong object, or the described issue is not
+remotely visible).
+
+Direction 2 — does the finding miss anything? Separately, look at the WHOLE
+photo for anything else visibly wrong or noteworthy that the finding text
+does NOT mention at all. Only report something here if it is clearly
+visible — do not invent minor details to fill this list. An empty list is a
+correct answer if nothing else stands out.
+
+Respond ONLY with JSON matching this exact shape, no markdown fences, no
+extra commentary:
+
+{
+  "verdict": "match" | "mismatch",
+  "confidence": <number 0 to 1>,
+  "reasoning": "<one sentence, max 20 words, plain language>",
+  "omissions": [
+    { "description": "<plain language, max 15 words>", "severity": "low" | "medium" | "high", "confidence": <0 to 1> }
+  ],
+  "recommended_action": "pass" | "flag_for_review"
+}
+```
+
+Retry rule: identical to Feature 2 — one retry with a stricter
+"return ONLY the JSON object" reminder if the first response fails schema
+validation; if that also fails, surface `{ error: true }` in the UI with a
+manual retry button rather than crashing.
+
+---
+
+## 5. Decision logic — the two rules that matter here
+
+The model outputs `verdict`, `confidence`, and `omissions`; your code decides
+`recommended_action` from all three, the same way Features 1 and 2 keep
+scoring logic in code rather than trusting the model to self-grade:
+
+```js
+function contradictionAction(verdict, confidence, omissions) {
+  if (verdict === "mismatch") return "flag_for_review";
+
+  // A "match" the model isn't confident about is NOT a clean pass —
+  // an uncertain agreement still deserves a human glance.
+  if (verdict === "match" && confidence < 0.6) return "flag_for_review";
+
+  // NEW: even a confident, correct match can still be incomplete. A
+  // significant omission overrides an otherwise clean verdict.
+  const hasSignificantOmission = omissions.some(
+    (o) =>
+      (o.severity === "high" && o.confidence >= 0.6) ||
+      (o.severity === "medium" && o.confidence >= 0.75)
+  );
+  if (hasSignificantOmission) return "flag_for_review";
+
+  return "pass";
+}
+```
+
+Say this explicitly on the call if asked how confidence is used: a
+low-confidence "match" is treated the same as a "have a human check this,"
+and so is a confident match that's sitting next to something the model
+noticed and the inspector didn't — neither one is a rubber stamp.
+
+---
+
+## 6. Sample pairing pool (8 pairs — for the dropdowns and for mixing/matching)
+
+Three from real PTP360 evidence already in the app, five from the Feature 2
+synthetic image set (once those are generated from the prompts in
+`BUILD_PROMPT_FEATURE_2.md`) — build against the first three now, add the
+other five as they become available.
+
+| # | Photo | Finding text |
+|---|---|---|
+| 1 | `garage-water-heater.png` | "Water leaking from TPR valve. Recommend correction as necessary to repair the problem." |
+| 2 | `front-porch.png` | "The wood entry door is weathered and showing signs of finish deterioration. Recommend refinishing." |
+| 3 | `deck.png` | "Wood damage is evident on a few of the railing spindles. Recommend replacement of the affected spindles." |
+| 4 | kitchen (F2 synthetic) | "Water staining and swelling observed on cabinet flooring beneath the sink. Recommend inspecting supply and drain connections for a slow leak." |
+| 5 | bathroom (F2 synthetic) | "Caulking at the tub-to-tile joint is cracked and deteriorated with visible mold growth along the seam. Recommend recaulking to prevent further moisture intrusion." |
+| 6 | attic (F2 synthetic) | "Attic insulation and ventilation appear adequate. No signs of moisture, staining, or structural concerns observed." |
+| 7 | electrical panel (F2 synthetic) | "Discoloration consistent with overheating was observed at one breaker connection, along with corrosion on the adjacent panel surface. Recommend evaluation by a licensed electrician." |
+| 8 | roof/gutter (F2 synthetic) | "Roof covering and gutters at this section are in serviceable condition. No damage or debris buildup observed." |
+
+**For the live demo, the strongest deliberate mismatch to pre-plan**: pair
+photo #1 (water heater, clearly leaking) with finding #6's text ("Attic
+insulation and ventilation appear adequate..."). Wrong object, wrong room,
+nothing in common — an easy, confident `mismatch` the model should never get
+wrong, which makes it a safe one to run live without risking an awkward
+ambiguous result in front of Furlough. Keep a second, subtler mismatch in
+your back pocket (e.g., photo #1 + finding #4's kitchen-sink text — same
+general "water damage" theme, different specific object) in case you want to
+show the model catching something less obvious.
+
+---
+
+## 7. Acceptance checklist
+
+- [ ] Photo dropdown and finding-text dropdown are independent controls, not
+      a single combined "pick a pair" selector
+- [ ] Upload-your-own works for both photo and finding text, not just the
+      sample dropdowns
+- [ ] Verdict panel shows: verdict, confidence, one-sentence reasoning,
+      recommended_action, PLUS an "also spotted" list that only renders when
+      `omissions` is non-empty — never an empty section header
+- [ ] `omissions` correctly returns an empty array (not a fabricated entry)
+      on at least one of the "clean" sample photos (attic or roof/gutter) —
+      confirm this before the call, since an empty result here is a pass, not
+      a bug
+- [ ] Session history strip accumulates every check run, newest on top,
+      persists only for the session (no database, no page reload survival
+      needed)
+- [ ] A `match` with confidence below 0.6 still returns
+      `recommended_action: "flag_for_review"`, not `"pass"`
+- [ ] A `match` with high confidence but a significant omission also returns
+      `"flag_for_review"` — test this specifically, it's the newest and least
+      obvious rule in the logic
+- [ ] The pre-planned obvious mismatch (water heater photo + attic finding)
+      has been run at least once during a test pass and returns `mismatch`
+      with high confidence before relying on it live
+- [ ] If you plan to demo the omissions feature specifically, run that exact
+      pairing ahead of time and confirm what the model actually flags —
+      don't assume a specific omission (like the mockup's "corrosion on the
+      tank base") will appear; verify against the real image first

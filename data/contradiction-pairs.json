@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "photoLabel": "Water heater — garage",
+    "photoPath": "/sample-images/garage-water-heater.png",
+    "findingLabel": "TPR valve leak",
+    "findingText": "Water leaking from TPR valve. Recommend correction as necessary to repair the problem."
+  },
+  {
+    "id": 2,
+    "photoLabel": "Entry door — front porch",
+    "photoPath": "/sample-images/front-porch.png",
+    "findingLabel": "Weathered entry door finish",
+    "findingText": "The wood entry door is weathered and showing signs of finish deterioration. Recommend refinishing."
+  },
+  {
+    "id": 3,
+    "photoLabel": "Railing spindles — deck",
+    "photoPath": "/sample-images/deck.png",
+    "findingLabel": "Damaged railing spindles",
+    "findingText": "Wood damage is evident on a few of the railing spindles. Recommend replacement of the affected spindles."
+  },
+  {
+    "id": 4,
+    "photoLabel": "Under-sink cabinet — kitchen",
+    "photoPath": "/sample-images/kitchen-cabinet-water-damage.png",
+    "findingLabel": "Cabinet water staining",
+    "findingText": "Water staining and swelling observed on cabinet flooring beneath the sink. Recommend inspecting supply and drain connections for a slow leak."
+  },
+  {
+    "id": 5,
+    "photoLabel": "Tub surround — bathroom",
+    "photoPath": "/sample-images/bathroom-tub-caulk-mold.png",
+    "findingLabel": "Cracked caulk with mold",
+    "findingText": "Caulking at the tub-to-tile joint is cracked and deteriorated with visible mold growth along the seam. Recommend recaulking to prevent further moisture intrusion."
+  },
+  {
+    "id": 6,
+    "photoLabel": "Attic",
+    "photoPath": "/sample-images/attic-clean.png",
+    "findingLabel": "Attic — no concerns",
+    "findingText": "Attic insulation and ventilation appear adequate. No signs of moisture, staining, or structural concerns observed."
+  },
+  {
+    "id": 7,
+    "photoLabel": "Breaker panel — electrical",
+    "photoPath": "/sample-images/electrical-panel-scorch.png",
+    "findingLabel": "Overheating breaker + corrosion",
+    "findingText": "Discoloration consistent with overheating was observed at one breaker connection, along with corrosion on the adjacent panel surface. Recommend evaluation by a licensed electrician."
+  },
+  {
+    "id": 8,
+    "photoLabel": "Roof / gutter section",
+    "photoPath": "/sample-images/roof-gutter-clean.png",
+    "findingLabel": "Roof/gutter — serviceable",
+    "findingText": "Roof covering and gutters at this section are in serviceable condition. No damage or debris buildup observed."
+  }
+]
